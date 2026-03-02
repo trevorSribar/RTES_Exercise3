@@ -30,6 +30,7 @@
 // END MODIFICATION
 
 #define MAX_MSG_SIZE 128
+#define MAX_MSG_ALLOCATION MAX_MSG_SIZE+1
 #define ERROR (-1)
 
 struct mq_attr mq_attr;
@@ -46,7 +47,7 @@ static char canned_msg[] = "This is a test, and only a test, in the event of rea
 void *receiver(void *arg)
 {
   mqd_t mymq;
-  char buffer[MAX_MSG_SIZE];
+  char *input;
   int prio;
   int rc;
  
@@ -60,14 +61,14 @@ void *receiver(void *arg)
     {
         printf("receiver - awaiting message\n");
 #if 1
-        if((rc = mq_receive(mymq, buffer, MAX_MSG_SIZE, &prio)) == ERROR)
+        if((rc = mq_receive(mymq, (char*)&input, sizeof(char*), &prio)) == ERROR)
         {
           perror("mq_receive");
         }
         else
         {
-          buffer[MAX_MSG_SIZE] = '\0';
-          printf("receive: msg %s received with priority = %d, rc = %d\n", buffer, prio, rc);
+          printf("receive: msg %s received with priority = %d, rc = %d\n", input, prio, rc);
+          free(input);
         }
 #endif
 
@@ -90,9 +91,11 @@ void *sender(void *arg)
     /* send messages with priority=30 */
     do
     {
-        printf("sender - sending message of size=%d\n", sizeof(canned_msg));
+        printf("sender - sending message of size=%d\n", sizeof(char*));
 #if 1
-        if((rc = mq_send(mymq, canned_msg, sizeof(canned_msg), 30)) == ERROR)
+        char *heap_msg = malloc(sizeof(canned_msg));
+        strcpy(heap_msg, canned_msg);
+        if((rc = mq_send(mymq, (char*)&heap_msg, sizeof(char*), 30)) == ERROR)
         {
             perror("mq_send");
         }
@@ -112,7 +115,8 @@ void main(void)
   int i=0, rc=0;
   /* setup common message q attributes */
   mq_attr.mq_maxmsg = 10;
-  mq_attr.mq_msgsize = MAX_MSG_SIZE;
+  mq_attr.mq_msgsize = sizeof(char*);
+  mq_unlink(SNDRCV_MQ); //removes old que cuz it was giving me incorrect outptus during runtime
 
   mq_attr.mq_flags = 0;
 

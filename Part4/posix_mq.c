@@ -1,5 +1,5 @@
 // ORIGINAL CODE form Exercise 3, POSIX_MQ_loop code
-// MODIFIED 2/28 by Trevor Sribar  
+// MODIFIED 2/28 by Trevor Sribar
 
 //#include "msgQLib.h"
 //#include "mqueue.h"
@@ -13,6 +13,7 @@
 #include <pthread.h>
 #include <mqueue.h>
 #include <unistd.h>
+#include <sched.h>
 
 // On Linux the file systems slash is needed
 #define SNDRCV_MQ "/send_receive_mq"
@@ -27,6 +28,7 @@
 // END MODIFICATION
 
 #define MAX_MSG_SIZE 128
+#define MAX_MSG_ALLOCATION MAX_MSG_SIZE+1
 #define ERROR (-1)
 
 struct mq_attr mq_attr;
@@ -43,7 +45,7 @@ static char canned_msg[] = "This is a test, and only a test, in the event of rea
 void *receiver(void *arg)
 {
   mqd_t mymq;
-  char buffer[MAX_MSG_SIZE];
+  char buffer[MAX_MSG_ALLOCATION];
   int prio;
   int rc;
  
@@ -143,6 +145,8 @@ void main(void)
   rc = pthread_attr_setschedpolicy(&attr_send, SCHEDULE_USED); // MODIFIED
   param_send.sched_priority = rt_max_prio;
   pthread_attr_setschedparam(&attr_send, &param_send);
+
+  // END MODIFIED CODE
   
   if((rc=pthread_create(&th_send, &attr_send, sender, NULL)) == 0)
   {
@@ -164,7 +168,7 @@ void main(void)
     printf("rc=%d\n", rc);
   }
 
-  printf("pthread join send\n");  
+  printf("pthread join send\n");
   pthread_join(th_send, NULL);
 
   printf("pthread join receive\n");  
